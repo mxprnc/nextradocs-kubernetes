@@ -2,7 +2,7 @@
 
 ## 1. Job이란?
 
-Job은 Kubernetes에서 특정 작업을 완료할 때까지 Pod를 실행하고 관리하는 Workload 리소스입니다.
+**Job은 Kubernetes에서 특정 작업을 완료할 때까지 Pod를 실행하고 관리하는 Workload 리소스입니다.**
 
 Deployment나 StatefulSet은 애플리케이션이 지속적으로 실행되도록 Pod를 유지하는 데 목적이 있습니다. 반면 Job은 정해진 작업을 수행하고 정상적으로 완료되면 실행을 종료하는 데 목적이 있습니다.
 
@@ -15,20 +15,20 @@ Deployment나 StatefulSet은 애플리케이션이 지속적으로 실행되도�
 - 일회성 배치 작업
 - 정기 작업을 수행하기 위한 개별 실행 단위
 
-Job은 Pod를 생성하고 작업이 완료될 때까지 실행 상태를 관리합니다. Pod가 정상적으로 작업을 완료하면 Job도 완료 상태가 됩니다.
+Job은 Pod를 생성하고 작업이 완료될 때까지 실행 상태를 관리합니다. Job이 생성한 Pod의 컨테이너가 정상적으로 종료되고 Pod가 성공 상태가 되면 Job은 성공적인 작업 완료로 집계합니다.
 
-작업 도중 Pod가 실패하면 Job은 설정된 재시도 정책에 따라 새로운 Pod를 생성하여 작업을 다시 시도할 수 있습니다.
+작업 도중 Pod가 실패하면 Job은 설정된 재시도 정책에 따라 새로운 Pod를 생성하여 작업을 다시 시도할 수 있습니다. 단, Job은 애플리케이션의 비즈니스 작업이 정확히 한 번만 실행되는 것을 보장하지 않습니다.
 
 Job의 주요 특징은 다음과 같습니다.
 
 - 작업이 완료될 때까지 Pod를 실행합니다.
-- Pod가 정상적으로 종료되면 Job을 완료 상태로 전환합니다.
+- Pod가 정상적으로 종료되면 성공적인 완료로 집계합니다.
 - Pod가 실패하면 설정된 정책에 따라 재시도할 수 있습니다.
 - 여러 Pod를 병렬로 실행하여 작업을 처리할 수 있습니다.
 - 작업의 성공 및 실패 횟수를 추적합니다.
 - 완료된 Job과 Pod를 일정 기간 유지하거나 정리할 수 있습니다.
 
-Job은 지속적으로 실행되는 서비스가 아니라 완료가 필요한 작업을 실행하고 관리하기 위한 Workload 리소스입니다.
+Job은 지속적으로 실행되는 서비스가 아니라 **완료가 필요한 작업을 실행하고 관리하기 위한 Workload 리소스**입니다.
 
 ## 2. Job의 구조
 
@@ -36,7 +36,7 @@ Job은 Pod Template을 기반으로 Pod를 생성하고 관리합니다.
 
 가장 기본적인 Job은 하나의 Pod를 실행하여 작업을 완료하는 구조입니다.
 
-```
+```text
 Kubernetes Cluster
 │
 └── Job: data-processing
@@ -56,15 +56,17 @@ Kubernetes Cluster
 
 Job은 Pod가 정상적으로 종료되었는지 확인하여 작업 완료 여부를 판단합니다.
 
-예를 들어 데이터 처리 프로그램이 실행을 마치고 종료 코드 `0`을 반환하면 Pod는 성공적으로 종료되고 Job은 완료 상태가 됩니다.
+예를 들어 데이터 처리 프로그램이 실행을 마치고 종료 코드 `0`을 반환하면 컨테이너가 정상적으로 종료되고, Pod가 성공 상태가 되어 Job의 완료 횟수에 반영됩니다.
 
 반면 컨테이너가 오류로 종료되거나 Pod가 실패하면 Job은 설정된 재시도 정책에 따라 작업을 다시 실행할 수 있습니다.
+
+Job이 완료되더라도 Job과 Pod가 즉시 삭제되는 것은 아닙니다. 기본적으로 완료된 리소스는 상태와 로그를 확인할 수 있도록 유지되며, 별도의 삭제 정책을 설정하거나 직접 삭제해야 합니다.
 
 ## 3. Job YAML 구성
 
 다음은 간단한 데이터 처리 작업을 수행하는 Job 예제입니다.
 
-```
+```yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -85,21 +87,21 @@ spec:
 
 각 필드의 역할은 다음과 같습니다.
 
-| 필드              | 설명                                                |
-| --------------- | ------------------------------------------------- |
-| `apiVersion`    | Kubernetes API 버전을 지정합니다. Job은 `batch/v1`을 사용합니다. |
-| `kind`          | 생성할 리소스의 종류를 지정합니다.                               |
-| `metadata`      | Job의 이름과 메타데이터를 정의합니다.                            |
-| `spec`          | Job의 원하는 실행 상태를 정의합니다.                            |
-| `template`      | Job이 생성할 Pod의 구성을 정의합니다.                          |
-| `containers`    | 실제 작업을 수행할 컨테이너를 정의합니다.                           |
-| `restartPolicy` | 컨테이너가 종료되었을 때 Pod 내부에서 재시작할지 여부를 지정합니다.           |
+| 필드 | 설명 |
+| --- | --- |
+| `apiVersion` | Kubernetes API 버전을 지정합니다. Job은 `batch/v1`을 사용합니다. |
+| `kind` | 생성할 리소스의 종류를 지정합니다. |
+| `metadata` | Job의 이름과 메타데이터를 정의합니다. |
+| `spec` | Job의 원하는 실행 상태를 정의합니다. |
+| `template` | Job이 생성할 Pod의 구성을 정의합니다. |
+| `containers` | 실제 작업을 수행할 컨테이너를 정의합니다. |
+| `restartPolicy` | 컨테이너가 종료되었을 때 Pod 내부에서 컨테이너를 재시작할지 여부를 지정합니다. |
 
 ### 3.1. restartPolicy
 
 Job의 Pod Template에서는 `restartPolicy`를 `Never` 또는 `OnFailure`로 설정해야 합니다.
 
-```
+```yaml
 spec:
   template:
     spec:
@@ -108,20 +110,27 @@ spec:
 
 두 정책의 차이는 다음과 같습니다.
 
-| 정책          | 설명                                                                          |
-| ----------- | --------------------------------------------------------------------------- |
-| `Never`     | 컨테이너가 실패하면 기존 Pod를 재시작하지 않습니다. Job Controller가 필요에 따라 새로운 Pod를 생성하여 재시도합니다. |
-| `OnFailure` | 컨테이너가 실패하면 동일한 Pod 내부에서 컨테이너를 재시작할 수 있습니다.                                  |
+| 정책 | 설명 |
+| --- | --- |
+| `Never` | 컨테이너가 실패하면 기존 Pod를 재시작하지 않습니다. Job Controller가 필요에 따라 새로운 Pod를 생성하여 재시도합니다. |
+| `OnFailure` | 컨테이너가 실패하면 동일한 Pod 내부에서 컨테이너를 재시작할 수 있습니다. |
 
 `Always`는 Job의 Pod Template에서 사용할 수 없습니다.
 
-Job은 작업이 완료되면 Pod를 종료해야 하므로 지속적으로 컨테이너를 재시작하는 `Always` 정책과 맞지 않습니다.
+Job은 작업이 완료되면 Pod를 종료해야 하므로 컨테이너를 계속 재시작하는 `Always` 정책과 맞지 않습니다.
+
+`Never`와 `OnFailure`는 실패 처리 방식뿐 아니라 `backoffLimit`에 반영되는 실패 횟수의 계산 방식에도 영향을 줍니다.
+
+- `Never`: 실패한 Pod의 개수를 기준으로 재시도 한도를 판단합니다.
+- `OnFailure`: 실패한 Pod의 개수뿐 아니라 실행 중인 Pod 내부에서 발생한 컨테이너 재시작 횟수도 반영합니다.
+
+실패한 Pod의 로그와 상태를 보존하면서 재시도 과정을 확인하려면 `Never`를 사용하는 것이 유리합니다.
 
 ### 3.2. completions
 
 `completions`는 Job이 성공적으로 완료해야 하는 작업의 횟수를 지정합니다.
 
-```
+```yaml
 spec:
   completions: 3
 ```
@@ -130,7 +139,7 @@ spec:
 
 예를 들어 다음과 같이 동작할 수 있습니다.
 
-```
+```text
 Job: data-processing
 │
 ├── Pod 1 ── Success
@@ -146,11 +155,13 @@ Job: data-processing
 
 `completions`를 지정하지 않으면 기본적으로 하나의 성공적인 완료를 목표로 합니다.
 
+단, `completions`를 생략하는 경우에는 `parallelism` 설정에 따라 동작 방식이 달라질 수 있습니다. 특히 `completions`가 생략되고 `parallelism`이 1보다 큰 경우에는 여러 Pod가 각각 독립적인 작업 단위를 처리하는 고정 완료 횟수 방식이 아니라 Work Queue 방식으로 동작할 수 있습니다.
+
 ### 3.3. parallelism
 
 `parallelism`은 동시에 실행할 수 있는 Pod의 최대 개수를 지정합니다.
 
-```
+```yaml
 spec:
   completions: 6
   parallelism: 3
@@ -158,40 +169,74 @@ spec:
 
 위 설정은 총 6개의 작업을 성공적으로 완료해야 하며, 동시에 최대 3개의 Pod를 실행할 수 있다는 의미입니다.
 
-```
+```text
 Job: data-processing
 │
-├── Batch 1
+├── 최대 3개 Pod 동시 실행
 │   ├── Pod 1 ── Running
 │   ├── Pod 2 ── Running
 │   └── Pod 3 ── Running
 │
-├── Batch 2
-│   ├── Pod 4 ── Running
-│   ├── Pod 5 ── Running
-│   └── Pod 6 ── Running
+├── 앞선 Pod 완료 후 다음 Pod 실행
+│   ├── Pod 4
+│   ├── Pod 5
+│   └── Pod 6
 │
-└── Job Complete
+└── 성공적인 완료 6회 달성
+     │
+     ▼
+  Job Complete
 ```
 
-실제 실행 순서와 동시 실행 개수는 Pod의 생성 및 종료 시점, 노드의 리소스 상황 등에 따라 달라질 수 있습니다.
+실제 실행 순서와 동시 실행 개수는 Pod의 생성 및 종료 시점, 노드의 리소스 상황, 스케줄링 가능 여부 등에 따라 달라질 수 있습니다.
+
+`parallelism`은 동시에 실행하도록 요청하는 최대 Pod 개수이지, 해당 개수만큼의 Pod가 반드시 동시에 실행된다는 의미는 아닙니다.
 
 ### 3.4. backoffLimit
 
-`backoffLimit`은 Job이 실패한 경우 재시도할 수 있는 횟수를 지정합니다.
+`backoffLimit`은 Job의 실패 재시도 한도를 지정합니다.
 
-```
+```yaml
 spec:
   backoffLimit: 4
 ```
 
 기본값은 `6`입니다.
 
-Job은 실패한 Pod의 수 등을 기준으로 재시도 정책을 적용하며, 실패가 허용된 한도를 초과하면 Job을 실패 상태로 처리합니다.
+Job은 실패한 Pod의 수와 Pod 내부 컨테이너 재시작 횟수 등을 기준으로 재시도 한도를 판단합니다.
 
-다음과 같은 흐름으로 동작할 수 있습니다.
+기본적인 재시도 간격은 지수형 백오프(Exponential Backoff)를 사용합니다.
 
+```text
+첫 번째 실패
+    │
+    ▼
+  10초 대기
+    │
+    ▼
+두 번째 실패
+    │
+    ▼
+  20초 대기
+    │
+    ▼
+세 번째 실패
+    │
+    ▼
+  40초 대기
+    │
+    ▼
+   ...
+    │
+    ▼
+최대 6분 간격으로 대기
 ```
+
+재시도 대기 시간은 실패가 반복될수록 증가하며 최대 6분으로 제한됩니다.
+
+전체적인 동작 흐름은 다음과 같습니다.
+
+```text
 Job 실행
    │
    ▼
@@ -201,14 +246,17 @@ Pod 생성
 작업 실패
    │
    ▼
-재시도 가능 여부 확인
+실패 횟수 확인
    │
-   ├── 재시도 가능
+   ├── 재시도 한도 이내
    │      │
    │      ▼
-   │   새로운 Pod 생성
+   │   백오프 대기
+   │      │
+   │      ▼
+   │   재시도 수행
    │
-   └── 재시도 한도 초과
+   └── 재시도 한도 도달
           │
           ▼
        Job Failed
@@ -216,21 +264,21 @@ Pod 생성
 
 `restartPolicy: Never`를 사용하면 실패한 Pod가 종료된 상태로 남고, Job Controller가 새로운 Pod를 생성하여 재시도할 수 있습니다.
 
-`restartPolicy: OnFailure`를 사용하면 동일한 Pod 내부에서 컨테이너가 재시작될 수 있으므로 재시도 횟수와 관련된 동작이 달라집니다.
+`restartPolicy: OnFailure`를 사용하면 동일한 Pod 내부에서 컨테이너가 재시작될 수 있으므로 재시도 횟수의 집계 방식이 달라집니다.
 
-따라서 재시도 횟수를 정확하게 제어해야 한다면 Pod 재시작 정책과 Job의 실패 처리 정책을 함께 이해해야 합니다.
+따라서 재시도 횟수를 제어하려면 Pod 재시작 정책과 Job의 실패 처리 정책을 함께 이해해야 합니다.
 
 ## 4. Job의 실행 방식
 
-Job은 작업의 특성에 따라 단일 작업, 순차 작업, 병렬 작업 등으로 구성할 수 있습니다.
+Job은 작업의 특성에 따라 단일 작업, 고정 완료 횟수 작업, Work Queue 기반 작업 등으로 구성할 수 있습니다.
 
-### 4.1. 단일 작업 (Single Completion)
+### 4.1. 단일 작업 (Non-parallel Job)
 
 가장 기본적인 Job 실행 방식입니다.
 
 하나의 Pod가 작업을 실행하고 정상적으로 완료되면 Job도 완료됩니다.
 
-```
+```yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -249,7 +297,7 @@ spec:
       restartPolicy: Never
 ```
 
-별도로 `completions`를 지정하지 않았으므로 하나의 성공적인 완료를 목표로 합니다.
+`completions`와 `parallelism`을 별도로 지정하지 않았으므로 기본적으로 하나의 성공적인 완료를 목표로 합니다.
 
 다음과 같은 작업에 적합합니다.
 
@@ -262,7 +310,7 @@ spec:
 
 여러 작업을 순차적으로 처리해야 한다면 `completions`를 지정하고 `parallelism`을 `1`로 설정할 수 있습니다.
 
-```
+```yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -286,7 +334,7 @@ spec:
 
 위 설정은 성공적으로 완료된 Pod가 총 5개가 될 때까지 한 번에 하나씩 작업을 실행합니다.
 
-```
+```text
 Job
  │
  ▼
@@ -320,15 +368,17 @@ Pod 5 실행
 Job Complete
 ```
 
-다만 이 방식은 각각의 Pod가 독립적인 작업 단위를 수행하는 구조입니다.
+다만 이 방식은 각각의 Pod가 동일한 Pod Template을 기반으로 독립적인 작업 단위를 수행하는 구조입니다.
+
+Kubernetes가 이전 Pod의 처리 결과를 다음 Pod에 자동으로 전달하거나 작업 순서를 보장하는 것은 아닙니다.
 
 앞선 Pod가 처리한 결과를 다음 Pod가 반드시 이어서 처리해야 하는 작업이라면 애플리케이션 차원에서 작업 순서와 상태를 관리해야 합니다.
 
-### 4.3. 병렬 작업 (Parallel Processing)
+### 4.3. 병렬 작업 (Fixed Completion Count)
 
-여러 작업을 동시에 처리해야 한다면 `parallelism`을 1보다 큰 값으로 설정할 수 있습니다.
+여러 작업을 동시에 처리해야 한다면 `completions`와 `parallelism`을 함께 설정할 수 있습니다.
 
-```
+```yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -350,39 +400,91 @@ spec:
       restartPolicy: Never
 ```
 
-위 설정은 총 10개의 작업을 완료해야 하며, 동시에 최대 3개의 Pod를 실행할 수 있습니다.
+위 설정은 총 10개의 작업을 성공적으로 완료해야 하며, 동시에 최대 3개의 Pod를 실행할 수 있습니다.
 
-```
+```text
 Job: parallel-job
 │
-├── Worker 1 ── Task 1
-├── Worker 2 ── Task 2
-├── Worker 3 ── Task 3
+├── Pod 1 ── Task 1
+├── Pod 2 ── Task 2
+├── Pod 3 ── Task 3
 │
-├── Worker 4 ── Task 4
-├── Worker 5 ── Task 5
-├── Worker 6 ── Task 6
+├── Pod 4 ── Task 4
+├── Pod 5 ── Task 5
+├── Pod 6 ── Task 6
 │
-├── Worker 7 ── Task 7
-├── Worker 8 ── Task 8
-├── Worker 9 ── Task 9
+├── Pod 7 ── Task 7
+├── Pod 8 ── Task 8
+├── Pod 9 ── Task 9
 │
-└── Worker 10 ── Task 10
+└── Pod 10 ── Task 10
 ```
 
 실제로는 앞선 Pod가 완료되는 대로 새로운 Pod가 실행되어 최대 병렬 실행 개수를 유지합니다.
 
-이러한 방식은 독립적인 데이터 처리 작업을 여러 개의 Pod로 분산할 때 유용합니다.
+다만 Kubernetes가 각 Pod에 실제 처리할 데이터나 작업 범위를 자동으로 분배하지는 않습니다. 동일한 Pod Template을 기반으로 Pod를 생성하므로 각 Pod가 서로 다른 작업을 수행하도록 애플리케이션에서 작업을 구분해야 합니다.
+
+이러한 방식은 독립적인 데이터 처리 작업을 여러 Pod로 분산할 때 유용합니다.
+
+### 4.4. Work Queue 기반 병렬 작업
+
+`completions`를 지정하지 않고 `parallelism`만 설정하면 Work Queue 기반 Job을 구성할 수 있습니다.
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: queue-job
+spec:
+  parallelism: 3
+
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - "echo 'Processing queue'; sleep 10"
+
+      restartPolicy: Never
+```
+
+이 방식에서는 Pod들이 외부 작업 큐 또는 공유 작업 관리 시스템을 통해 처리할 작업을 가져옵니다.
+
+```text
+Job: queue-job
+│
+├── Pod 1 ──┐
+├── Pod 2 ──┼── Work Queue
+└── Pod 3 ──┘      │
+                   ├── Task 1
+                   ├── Task 2
+                   ├── Task 3
+                   └── ...
+```
+
+고정된 `completions`가 없으므로 Job Controller는 성공적으로 완료된 Pod의 개수를 기준으로 목표 작업 횟수를 계산하지 않습니다.
+
+대신 다음과 같은 방식으로 동작합니다.
+
+- Pod들이 외부 작업 큐에서 처리할 작업을 가져옵니다.
+- 각 Pod는 작업이 남아 있는지 판단하고 처리합니다.
+- 하나의 Pod가 성공적으로 종료되면 새로운 Pod를 생성하지 않습니다.
+- 기존 Pod가 모두 종료되면 Job이 완료됩니다.
+
+따라서 Work Queue 기반 Job에서는 Pod가 작업 큐의 처리 완료 여부를 판단하고 적절한 시점에 종료되도록 애플리케이션을 구현해야 합니다.
 
 ## 5. Indexed Job
 
 Indexed Job은 각 작업에 고유한 인덱스를 부여하여 병렬 작업을 수행하는 방식입니다.
 
-일반적인 병렬 Job에서는 각 Pod가 어떤 작업을 담당하는지 별도로 구분하기 어려울 수 있습니다.
+일반적인 병렬 Job에서는 각 Pod가 어떤 작업을 담당하는지 구분하기 위해 별도의 작업 분배 로직이 필요할 수 있습니다.
 
 Indexed Job을 사용하면 각 Pod에 고유한 완료 인덱스를 부여할 수 있습니다.
 
-```
+```yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -407,7 +509,7 @@ spec:
 
 위 설정에서는 다음과 같은 인덱스가 각 작업에 할당됩니다.
 
-```
+```text
 Job: indexed-job
 │
 ├── Index 0
@@ -421,7 +523,7 @@ Pod 내부에서는 `JOB_COMPLETION_INDEX` 환경 변수를 통해 자신의 작
 
 예를 들어 데이터 파일을 5개로 나누어 처리한다면 각 Pod가 담당할 파일을 인덱스를 기준으로 결정할 수 있습니다.
 
-```
+```text
 Index 0 ── data-0.csv
 Index 1 ── data-1.csv
 Index 2 ── data-2.csv
@@ -429,7 +531,19 @@ Index 3 ── data-3.csv
 Index 4 ── data-4.csv
 ```
 
+Indexed Job의 주요 특징은 다음과 같습니다.
+
+- 각 작업에 `0`부터 `completions - 1`까지의 인덱스를 부여합니다.
+- 각 인덱스에 대해 성공적인 Pod 완료가 하나씩 필요합니다.
+- `JOB_COMPLETION_INDEX` 환경 변수로 작업 인덱스를 확인할 수 있습니다.
+- 각 인덱스별 작업 진행 상태를 추적할 수 있습니다.
+- 인덱스를 기반으로 작업 범위를 정적으로 분배할 수 있습니다.
+
 Indexed Job은 작업 단위가 명확하게 구분되는 병렬 처리에 적합합니다.
+
+단, 노드 장애나 Pod 재생성 등의 상황에서는 동일한 인덱스에 대해 여러 Pod가 실행될 수 있습니다. 따라서 Indexed Job 역시 애플리케이션의 중복 실행 가능성을 고려해야 합니다.
+
+`completionMode: Indexed`는 Kubernetes v1.24부터 Stable 기능으로 제공됩니다.
 
 ## 6. Job의 주요 설정
 
@@ -439,69 +553,185 @@ Job은 작업의 실행 시간, 재시도, 병렬성 및 완료 후 정리 방�
 
 `activeDeadlineSeconds`는 Job이 실행될 수 있는 최대 시간을 초 단위로 지정합니다.
 
-```
+```yaml
 spec:
   activeDeadlineSeconds: 300
 ```
 
-위 설정은 Job이 실행된 후 최대 300초 동안만 작업을 수행하도록 제한합니다.
+위 설정은 Job이 실행된 후 최대 300초 동안만 활성 상태로 실행되도록 제한합니다.
 
 지정한 시간이 초과되면 Kubernetes는 실행 중인 Job Pod를 종료하고 Job을 실패 상태로 처리합니다.
 
-`backoffLimit`보다 우선적으로 적용되므로 재시도를 계속하더라도 전체 실행 시간이 제한됩니다.
+`activeDeadlineSeconds`는 `backoffLimit`보다 우선적으로 적용됩니다. 따라서 재시도 횟수가 남아 있더라도 전체 실행 시간이 제한을 초과하면 Job은 실패 처리됩니다.
+
+또한 `activeDeadlineSeconds`는 Job의 `spec`에 설정해야 합니다. Pod Template 내부에도 같은 이름의 필드가 존재하지만, 이는 Pod 자체의 실행 시간 제한을 의미하므로 서로 다른 설정입니다.
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: limited-job
+spec:
+  activeDeadlineSeconds: 300
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command: ["sh", "-c", "sleep 600"]
+      restartPolicy: Never
+```
 
 ### 6.2. ttlSecondsAfterFinished
 
 `ttlSecondsAfterFinished`는 Job이 완료되거나 실패한 이후 리소스를 자동으로 삭제하기까지 대기할 시간을 지정합니다.
 
-```
+```yaml
 spec:
   ttlSecondsAfterFinished: 100
 ```
 
-위 설정은 Job이 완료되거나 실패한 시점부터 100초가 지난 후 Job을 정리하도록 요청합니다.
+위 설정은 Job이 완료되거나 실패한 시점부터 100초가 지난 후 Job을 정리할 수 있도록 설정합니다.
 
 Job이 삭제되면 해당 Job이 소유한 Pod도 함께 정리될 수 있습니다.
 
-이 설정은 완료된 Job이 클러스터에 계속 남아 리소스를 차지하거나 관리 대상이 증가하는 것을 방지하는 데 유용합니다.
+이 설정은 완료된 Job이 클러스터에 계속 남아 관리 대상이 증가하는 것을 방지하는 데 유용합니다.
 
 단, 실제 삭제 시점은 TTL Controller의 처리 상황에 따라 달라질 수 있습니다.
+
+`ttlSecondsAfterFinished`를 지정하지 않으면 Job이 자동으로 삭제되지 않습니다.
 
 ### 6.3. suspend
 
 `suspend`는 Job의 실행을 일시 중지할지 여부를 지정합니다.
 
-```
+```yaml
 spec:
   suspend: true
 ```
 
-`true`로 설정하면 Job의 새로운 Pod 생성을 중지하고, 실행 중인 Job Pod를 종료하도록 처리합니다.
+`true`로 설정하면 Job Controller는 새로운 Pod를 생성하지 않습니다.
+
+이미 실행 중인 Pod가 있다면 종료하도록 처리하며, 이 과정에서 Pod에 `SIGTERM` 신호가 전달되고 설정된 Graceful Termination 기간이 적용됩니다.
+
+따라서 작업 중단 시점에 데이터를 저장하거나 작업 상태를 복구해야 하는 애플리케이션이라면 종료 신호를 처리하는 로직이 필요합니다.
 
 다시 실행하려면 다음과 같이 설정합니다.
 
-```
+```yaml
 spec:
   suspend: false
 ```
 
-이를 통해 Job의 실행을 일시적으로 중단하거나 재개할 수 있습니다.
+Job을 재개하면 Controller가 다시 Pod를 생성하여 작업을 진행합니다.
+
+`suspend`는 Job의 실행을 일시 중지하는 설정이며, Job 리소스를 삭제하거나 실패 상태로 변경하는 설정은 아닙니다.
+
+또한 Job을 재개하면 `activeDeadlineSeconds`의 시간 계산이 재설정됩니다. 따라서 일시 중지된 시간은 해당 Job의 활성 실행 시간에 포함되지 않습니다.
+
+`suspend`는 Kubernetes v1.24부터 Stable 기능으로 제공됩니다.
 
 ### 6.4. backoffLimitPerIndex
 
-Indexed Job에서는 `backoffLimitPerIndex`를 사용하여 각 인덱스별 재시도 허용 횟수를 지정할 수 있습니다.
+Indexed Job에서는 `backoffLimitPerIndex`를 사용하여 각 인덱스별 실패 재시도 한도를 지정할 수 있습니다.
 
-```
+```yaml
 spec:
-  completionMode: Indexed
   completions: 5
   parallelism: 2
+  completionMode: Indexed
   backoffLimitPerIndex: 2
 ```
 
-위 설정은 각 인덱스 작업마다 최대 2회의 실패를 허용하도록 구성합니다.
+위 설정은 각 인덱스 작업마다 최대 2회의 Pod 실패를 허용하도록 구성합니다.
 
-일반적인 `backoffLimit`이 Job 전체의 실패 처리에 적용되는 것과 달리, `backoffLimitPerIndex`는 개별 인덱스의 실패 횟수를 기준으로 관리합니다.
+일반적인 `backoffLimit`이 Job 전체의 실패 횟수를 기준으로 관리하는 것과 달리, `backoffLimitPerIndex`는 개별 인덱스의 실패 횟수를 기준으로 관리합니다.
+
+특정 인덱스의 실패 횟수가 허용 한도를 초과하면 해당 인덱스는 실패한 것으로 기록됩니다.
+
+```text
+Indexed Job
+│
+├── Index 0 ── Success
+├── Index 1 ── Success
+├── Index 2 ── Failed
+├── Index 3 ── Success
+└── Index 4 ── Success
+     │
+     ▼
+  Index 2 실패 기록
+     │
+     ▼
+  다른 인덱스 작업은 계속 진행
+```
+
+다른 인덱스의 작업은 독립적으로 계속 진행될 수 있으며, 모든 인덱스 처리가 종료된 후 하나 이상의 인덱스가 실패했다면 Job 전체도 실패 상태가 됩니다.
+
+`backoffLimitPerIndex`는 Kubernetes v1.33부터 Stable 기능으로 제공됩니다.
+
+### 6.5. maxFailedIndexes
+
+`maxFailedIndexes`는 Indexed Job에서 실패를 허용할 최대 인덱스 개수를 지정합니다.
+
+```yaml
+spec:
+  completions: 10
+  parallelism: 3
+  completionMode: Indexed
+  backoffLimitPerIndex: 2
+  maxFailedIndexes: 3
+```
+
+위 설정은 최대 3개의 인덱스가 실패하는 것을 허용합니다.
+
+실패한 인덱스의 수가 지정한 한도를 초과하면 Job Controller는 나머지 실행 중인 Pod도 종료하도록 처리하고 Job 전체를 실패 상태로 전환합니다.
+
+`maxFailedIndexes`는 `backoffLimitPerIndex`와 함께 사용해야 합니다.
+
+### 6.6. podFailurePolicy
+
+`podFailurePolicy`는 Pod가 실패했을 때 실패 원인에 따라 Job Controller의 처리 방식을 지정하는 설정입니다.
+
+기본적으로 Job은 Pod가 실패하면 `backoffLimit`을 기준으로 재시도를 판단합니다. 하지만 모든 실패가 재시도할 가치가 있는 것은 아닙니다.
+
+예를 들어 잘못된 입력값이나 설정 오류로 인해 작업이 실패했다면 동일한 작업을 반복해도 성공할 가능성이 낮습니다.
+
+`podFailurePolicy`를 사용하면 실패 원인에 따라 다음과 같은 동작을 지정할 수 있습니다.
+
+- `FailJob`: 해당 Job을 즉시 실패 처리합니다.
+- `Ignore`: 해당 Pod의 실패를 `backoffLimit` 계산에서 제외합니다.
+- `Count`: 일반적인 Pod 실패로 계산합니다.
+- `FailIndex`: Indexed Job에서 해당 인덱스를 실패 처리합니다.
+
+예를 들어 특정 종료 코드가 발생하면 Job 전체를 실패 처리하도록 구성할 수 있습니다.
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: failure-policy-job
+spec:
+  backoffLimit: 5
+  podFailurePolicy:
+    rules:
+      - action: FailJob
+        onExitCodes:
+          containerName: worker
+          operator: In
+          values: [42]
+
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command: ["sh", "-c", "exit 42"]
+      restartPolicy: Never
+```
+
+`podFailurePolicy`를 사용하려면 Pod의 `restartPolicy`를 `Never`로 설정해야 합니다.
+
+이를 활용하면 재시도가 의미 없는 오류와 일시적인 오류를 구분하여 Job의 실패 처리 정책을 세밀하게 구성할 수 있습니다.
 
 ## 7. Job의 실패 처리와 재시도
 
@@ -511,7 +741,7 @@ Job은 Pod가 실패했다고 해서 즉시 전체 작업을 실패 상태로 �
 
 예를 들어 `restartPolicy: Never`를 사용하면 다음과 같은 흐름으로 동작합니다.
 
-```
+```text
 Job 생성
   │
   ▼
@@ -530,12 +760,15 @@ Pod 생성
        ▼
    실패 횟수 확인
        │
-       ├── 재시도 가능
+       ├── 재시도 한도 이내
+       │    │
+       │    ▼
+       │  백오프 대기
        │    │
        │    ▼
        │  새로운 Pod 생성
        │
-       └── 재시도 한도 초과
+       └── 재시도 한도 도달
             │
             ▼
          Job Failed
@@ -551,6 +784,7 @@ Job은 기본적으로 실패한 Pod를 다시 실행할 수 있도록 설계되
 - 동일한 데이터가 여러 번 처리되는 경우
 - 외부 API 호출이 성공했지만 응답을 받기 전에 Pod가 종료되는 경우
 - 데이터베이스에 반영된 작업을 다시 수행하는 경우
+- 노드 장애나 네트워크 문제로 인해 동일한 작업이 중복 실행되는 경우
 
 이러한 문제를 방지하려면 애플리케이션에서 멱등성(Idempotency)을 확보하거나 작업 진행 상태를 별도로 관리하는 것이 중요합니다.
 
@@ -562,7 +796,7 @@ CronJob은 지정된 일정에 따라 Job을 생성하는 리소스입니다.
 
 즉, CronJob은 직접 컨테이너를 실행하는 것이 아니라 실행 시점에 Job을 생성하고, Job이 실제 Pod를 실행합니다.
 
-```
+```text
 CronJob
   │
   │ 일정에 따라 실행
@@ -584,27 +818,27 @@ Container
 
 반면 일회성 데이터 마이그레이션처럼 특정 시점에 한 번만 실행하면 되는 작업에는 Job을 직접 사용할 수 있습니다.
 
-| 구분       | Job               | CronJob               |
-| -------- | ----------------- | --------------------- |
-| 주요 목적    | 작업 실행 및 완료 관리     | 일정에 따른 Job 생성         |
-| 실행 방식    | 생성된 시점에 작업 수행     | Cron 표현식에 따라 Job 생성   |
-| 반복 실행    | 기본적으로 반복 일정 기능 없음 | 반복 실행 지원              |
-| 실제 실행 단위 | Pod               | Job을 생성하며 Job이 Pod 실행 |
-| 주요 사용 사례 | 일회성 데이터 처리        | 정기적인 백업, 정기 배치 작업     |
+| 구분 | Job | CronJob |
+| --- | --- | --- |
+| 주요 목적 | 작업 실행 및 완료 관리 | 일정에 따른 Job 생성 |
+| 실행 방식 | 생성된 시점에 작업 수행 | Cron 표현식에 따라 Job 생성 |
+| 반복 실행 | 기본적으로 반복 일정 기능 없음 | 반복 실행 지원 |
+| 실제 실행 단위 | Pod | Job을 생성하며 Job이 Pod 실행 |
+| 주요 사용 사례 | 일회성 데이터 처리 | 정기적인 백업, 정기 배치 작업 |
 
 ## 9. Job과 다른 Workload 리소스의 관계
 
 Kubernetes의 Workload 리소스는 애플리케이션의 실행 목적에 따라 구분됩니다.
 
-| 리소스         | 주요 역할                     | 주요 사용 사례         |
-| ----------- | ------------------------- | ---------------- |
-| Pod         | 컨테이너 실행 단위                | 단일 애플리케이션 실행     |
-| Deployment  | Stateless 애플리케이션 배포 및 관리  | 웹 애플리케이션, API 서버 |
-| ReplicaSet  | 지정된 Pod 복제본 개수 유지         | Pod 복제본 관리       |
-| StatefulSet | 안정적인 식별자와 스토리지를 가진 Pod 관리 | 데이터베이스, 분산 시스템   |
-| DaemonSet   | 대상 노드마다 Pod 배치            | 로그 수집, 모니터링 에이전트 |
-| Job         | 작업이 완료될 때까지 Pod 실행        | 일회성 배치 작업        |
-| CronJob     | 일정에 따라 Job 실행             | 정기적인 배치 작업       |
+| 리소스 | 주요 역할 | 주요 사용 사례 |
+| --- | --- | --- |
+| Pod | 컨테이너 실행 단위 | 단일 애플리케이션 실행 |
+| Deployment | Stateless 애플리케이션 배포 및 관리 | 웹 애플리케이션, API 서버 |
+| ReplicaSet | 지정된 Pod 복제본 개수 유지 | Pod 복제본 관리 |
+| StatefulSet | 안정적인 식별자와 스토리지를 가진 Pod 관리 | 데이터베이스, 분산 시스템 |
+| DaemonSet | 대상 노드마다 Pod 배치 | 로그 수집, 모니터링 에이전트 |
+| Job | 작업이 완료될 때까지 Pod 실행 | 일회성 배치 작업 |
+| CronJob | 일정에 따라 Job 생성 | 정기적인 배치 작업 |
 
 Deployment, StatefulSet, DaemonSet은 애플리케이션이나 에이전트가 지속적으로 실행되도록 관리하는 데 적합합니다.
 
@@ -639,7 +873,22 @@ Job은 Pod가 실패하면 작업을 재시도할 수 있습니다.
 
 Indexed Job을 사용하면 인덱스를 기반으로 작업 범위를 구분할 수 있습니다.
 
-### 10.3. 리소스 요청량과 제한값을 설정해야 합니다.
+### 10.3. 동시 실행과 중복 실행을 고려해야 합니다.
+
+Job Controller는 장애나 Pod 상태 변경 등의 상황에서 동일한 작업을 수행하는 Pod를 중복으로 실행할 수 있습니다.
+
+특히 병렬 Job에서는 여러 Pod가 동시에 실행되므로 공유 데이터나 외부 시스템에 대한 동시 접근을 고려해야 합니다.
+
+다음과 같은 방법을 사용할 수 있습니다.
+
+- 데이터베이스 트랜잭션 및 Unique Constraint 적용
+- 분산 락 또는 작업 소유권 관리
+- 작업 단위별 멱등성 키 적용
+- 공유 자원에 대한 동시성 제어
+
+Job이 성공적인 완료 횟수를 관리한다는 사실과 애플리케이션의 작업이 정확히 한 번 실행된다는 사실은 구분해야 합니다.
+
+### 10.4. 리소스 요청량과 제한값을 설정해야 합니다.
 
 Job도 일반적인 Pod와 마찬가지로 CPU 및 메모리 리소스를 사용합니다.
 
@@ -647,7 +896,7 @@ Job도 일반적인 Pod와 마찬가지로 CPU 및 메모리 리소스를 사용
 
 따라서 컨테이너의 `resources.requests`와 `resources.limits`를 적절하게 설정해야 합니다.
 
-```
+```yaml
 resources:
   requests:
     cpu: "500m"
@@ -660,19 +909,24 @@ resources:
 
 병렬 Job을 실행하는 경우에는 동시에 실행되는 Pod의 전체 리소스 사용량도 고려해야 합니다.
 
-### 10.4. Job의 실행 시간과 재시도 횟수를 제한해야 합니다.
+예를 들어 Pod 하나가 CPU 1개와 메모리 1Gi를 요청하고 `parallelism`이 5라면, 최대 5개의 Pod가 동시에 실행될 수 있으므로 전체 요청량은 CPU 5개와 메모리 5Gi가 될 수 있습니다.
+
+실제 실행 가능한 Pod 수는 클러스터의 리소스 여유, ResourceQuota, 스케줄링 조건 등에 따라 달라집니다.
+
+### 10.5. Job의 실행 시간과 재시도 횟수를 제한해야 합니다.
 
 작업이 무한정 실행되거나 실패한 작업이 반복적으로 재시도되는 상황을 방지해야 합니다.
 
 이를 위해 다음 설정을 활용할 수 있습니다.
 
-- `activeDeadlineSeconds`: Job의 최대 실행 시간 제한
-- `backoffLimit`: 실패 재시도 허용 횟수 제한
+- `activeDeadlineSeconds`: Job의 최대 활성 실행 시간 제한
+- `backoffLimit`: 실패 재시도 한도 지정
+- `backoffLimitPerIndex`: Indexed Job의 인덱스별 실패 재시도 한도 지정
 - `ttlSecondsAfterFinished`: 완료된 Job의 자동 정리
 
 이러한 설정을 통해 작업의 실행 범위와 리소스 사용 기간을 관리할 수 있습니다.
 
-### 10.5. 완료된 Job과 Pod의 정리 정책을 고려해야 합니다.
+### 10.6. 완료된 Job과 Pod의 정리 정책을 고려해야 합니다.
 
 Job이 완료되더라도 Job과 Pod가 즉시 삭제되는 것은 아닙니다.
 
@@ -682,11 +936,11 @@ Job이 완료되더라도 Job과 Pod가 즉시 삭제되는 것은 아닙니다.
 
 운영 환경에서는 로그와 실행 결과를 별도로 수집하고, Job 리소스의 보존 기간을 적절하게 설정하는 것이 좋습니다.
 
-### 10.6. Job은 정확히 한 번의 실행을 보장하지 않습니다.
+### 10.7. Job은 정확히 한 번의 실행을 보장하지 않습니다.
 
 Job은 지정된 횟수만큼 성공적인 작업 완료를 달성하도록 Pod를 관리하지만, 애플리케이션의 비즈니스 작업이 정확히 한 번만 실행되는 것을 보장하지는 않습니다.
 
-Pod의 장애나 네트워크 문제 등으로 인해 동일한 작업이 재실행될 수 있습니다.
+Pod의 장애나 네트워크 문제, 노드 상태 변경 등으로 인해 동일한 작업이 재실행될 수 있습니다.
 
 따라서 중복 실행에 안전한 애플리케이션 구조를 설계해야 합니다.
 
@@ -694,7 +948,7 @@ Pod의 장애나 네트워크 문제 등으로 인해 동일한 작업이 재실
 
 ### 11.1. Job 조회
 
-```
+```bash
 # 현재 Namespace의 Job 조회
 kubectl get jobs
 
@@ -710,7 +964,7 @@ kubectl get job data-processing -o yaml
 
 ### 11.2. Job 생성 및 삭제
 
-```
+```bash
 # YAML Manifest 적용
 kubectl apply -f job.yaml
 
@@ -722,7 +976,7 @@ Job을 삭제하면 해당 Job이 소유한 Pod도 함께 정리될 수 있습�
 
 ### 11.3. Job이 생성한 Pod 조회
 
-```
+```bash
 # 특정 Job의 Pod 조회
 kubectl get pods -l job-name=data-processing
 
@@ -735,7 +989,7 @@ kubectl logs <pod-name>
 
 ### 11.4. Job 실행 상태 확인
 
-```
+```bash
 # Job 실행 상태 확인
 kubectl get job data-processing
 
@@ -746,9 +1000,11 @@ kubectl describe job data-processing
 kubectl wait --for=condition=complete job/data-processing --timeout=300s
 ```
 
+실패한 Job의 완료 조건을 기다리는 경우 `kubectl wait` 명령은 지정한 시간까지 완료 조건을 충족하지 못하면 시간 초과 오류를 반환할 수 있습니다.
+
 ### 11.5. Job의 실행 결과 확인
 
-```
+```bash
 # Job이 생성한 Pod의 상태 확인
 kubectl get pods -l job-name=data-processing
 
@@ -761,21 +1017,47 @@ kubectl get pods -l job-name=data-processing \
   --field-selector=status.phase=Failed
 ```
 
+### 11.6. Job 일시 중지 및 재개
+
+```bash
+# Job 일시 중지
+kubectl patch job data-processing \
+  --type=strategic \
+  -p '{"spec":{"suspend":true}}'
+
+# Job 재개
+kubectl patch job data-processing \
+  --type=strategic \
+  -p '{"spec":{"suspend":false}}'
+```
+
 ## 12. 핵심 정리
 
 Job은 Kubernetes에서 특정 작업을 완료할 때까지 Pod를 실행하고 관리하는 Workload 리소스입니다.
 
-- 작업이 완료되면 Job은 Complete 상태가 됩니다.
+- 작업이 완료되면 Job은 `Complete` 상태가 됩니다.
 - Pod가 실패하면 설정된 재시도 정책에 따라 작업을 다시 수행할 수 있습니다.
+- `restartPolicy`는 `Never` 또는 `OnFailure`만 사용할 수 있습니다.
 - `completions`를 통해 성공적으로 완료해야 하는 작업 횟수를 지정할 수 있습니다.
 - `parallelism`을 통해 동시에 실행할 Pod의 최대 개수를 지정할 수 있습니다.
+- `completions`와 `parallelism`을 조합하여 순차 또는 병렬 작업을 구성할 수 있습니다.
+- `completions`를 생략하고 `parallelism`을 설정하면 Work Queue 기반 작업을 구성할 수 있습니다.
 - Indexed Job을 사용하면 각 작업에 고유한 인덱스를 부여할 수 있습니다.
-- `backoffLimit`을 통해 실패 재시도 횟수를 제한할 수 있습니다.
-- `activeDeadlineSeconds`를 통해 Job의 최대 실행 시간을 제한할 수 있습니다.
+- `backoffLimit`을 통해 Job 전체의 실패 재시도 한도를 지정할 수 있습니다.
+- `backoffLimitPerIndex`를 통해 Indexed Job의 인덱스별 실패 재시도 한도를 지정할 수 있습니다.
+- `activeDeadlineSeconds`를 통해 Job의 최대 활성 실행 시간을 제한할 수 있습니다.
+- `suspend`를 통해 Job의 실행을 일시 중지하거나 재개할 수 있습니다.
 - `ttlSecondsAfterFinished`를 통해 완료되거나 실패한 Job을 일정 시간이 지난 후 자동으로 정리할 수 있습니다.
 - CronJob은 일정에 따라 Job을 생성하며, 실제 작업은 Job이 생성한 Pod가 수행합니다.
-- Job은 애플리케이션의 작업이 정확히 한 번만 실행되는 것을 보장하지 않으므로 멱등성을 고려해야 합니다.
+- Job은 애플리케이션의 작업이 정확히 한 번만 실행되는 것을 보장하지 않으므로 멱등성과 중복 실행을 고려해야 합니다.
 
-Job은 지속적으로 실행되는 애플리케이션이 아니라, 특정 작업을 수행하고 완료되는 실행 단위를 관리하기 위한 Workload 리소스입니다.
+**Job은 지속적으로 실행되는 애플리케이션이 아니라, 특정 작업을 수행하고 완료되는 실행 단위를 관리하기 위한 Workload 리소스입니다.**
 
 Deployment가 애플리케이션의 지속적인 실행 상태를 유지하는 데 적합하다면, Job은 데이터 처리, 초기화, 마이그레이션 등 완료 시점이 명확한 작업을 실행하는 데 적합합니다.
+
+## 13. 참고자료
+
+- [Kubernetes 공식 문서 - Jobs](https://kubernetes.io/docs/concepts/workloads/controllers/job/)
+- [Kubernetes 공식 문서 - Job API Reference](https://kubernetes.io/docs/reference/kubernetes-api/batch/job-v1/)
+- [Kubernetes 공식 문서 - CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
+- [Kubernetes 공식 문서 - TTL After Finished](https://kubernetes.io/docs/concepts/workloads/controllers/ttlafterfinished/)
