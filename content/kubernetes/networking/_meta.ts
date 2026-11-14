@@ -1,8 +1,9 @@
 export default {
-    'endpointslice': 'EndpointSlice',
-    'gateway-api': 'Gateway API',
-    'ingress-class': 'Ingress Class',
-    'ingress': 'Ingress',
-    'network-policy': 'Network Policy',
+    'index': 'Kubernetes Networking Resources',
     'service': 'Service',
+    'endpointslice': 'EndpointSlice',
+    'ingress': 'Ingress',
+    'ingress-class': 'Ingress Class',
+    'gateway-api': 'Gateway API',
+    'network-policy': 'Network Policy',
 }
