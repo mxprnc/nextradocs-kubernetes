@@ -1,4 +1,5 @@
 export default {
+  'architecture': 'Architecture',
   'workload': 'Workload',
   'networking': 'Networking',
   'storage': 'Storage',
